@@ -76,22 +76,6 @@
         .then(r => {
           if (!r.ok) return mostrarError(r.error || 'Ocurrió un error inesperado.');
 
-          if (r.tipo === 'lector') {
-            // Ya está suscrito: solo se abre su Outlook
-            if (r.yaSuscrito) return window.location.replace(r.urlOutlook);
-
-            // Primera vez: Outlook se abre con "Suscribirse desde la web" ya rellenado
-            const urlIcs = APP_URL + '?calendario=' + encodeURIComponent(r.tokenCalendario);
-            const urlSuscribir = r.urlOutlook + '0/addfromweb?url=' + encodeURIComponent(urlIcs) +
-              '&name=' + encodeURIComponent('Capacitaciones');
-            tarjeta.innerHTML = '<h1>¡Listo! Abriendo Outlook…</h1>' +
-              '<div class="aviso"><b>Solo esta vez:</b> en la ventana que aparece en Outlook, ' +
-              'haz clic en <b>"Importar"</b> para agregar el calendario <b>Capacitaciones</b> ' +
-              '(es de solo lectura).</div>';
-            setTimeout(() => window.location.replace(urlSuscribir), SEGUNDOS_AVISO_PRIMERA_VEZ * 1000);
-            return;
-          }
-
           if (r.calendarioNuevo && SEGUNDOS_AVISO_PRIMERA_VEZ > 0) {
             // Primera vez: Outlook no deja que una app active el calendario, se indica cómo hacerlo
             tarjeta.innerHTML = '<h1>¡Listo! Abriendo Outlook…</h1>' +
