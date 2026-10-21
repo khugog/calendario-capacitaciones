@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conectando con Outlook</title>
+  <style>
+    :root { --fondo: #f4f6f9; --tarjeta: #ffffff; --texto: #333333; --suave: #6c757d; --azul: #0d6efd; --error: #dc3545; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fondo: #1e1f22; --tarjeta: #2b2d31; --texto: #e6e6e6; --suave: #a0a4ab; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 16px; background: var(--fondo); color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .tarjeta {
+      width: 100%; max-width: 420px; padding: 32px 24px; text-align: center;
+      background: var(--tarjeta); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .spinner {
+      width: 44px; height: 44px; margin: 0 auto 20px; border-radius: 50%;
+      border: 4px solid rgba(13,110,253,0.2); border-top-color: var(--azul);
+      animation: girar 0.9s linear infinite;
+    }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    p { margin: 0; color: var(--suave); line-height: 1.5; }
+    .error h1 { color: var(--error); }
+    .aviso { margin-top: 16px; padding: 12px; border-radius: 8px; background: #fff3cd; color: #664d03; text-align: left; font-size: 14px; }
+    a.boton {
+      display: inline-block; margin-top: 20px; padding: 10px 18px; border-radius: 8px;
+      background: var(--azul); color: #fff; text-decoration: none; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="tarjeta" id="tarjeta">
+    <div class="spinner"></div>
+    <h1>Conectando con tu Outlook…</h1>
+    <p>Estamos sincronizando el Calendario de Capacitaciones.<br>La primera vez puede tardar unos segundos.</p>
+  </div>
+
+  <script>
+    // URL de la app web de Apps Script (la que termina en /exec)
+    const APP_URL = 'https://script.google.com/a/macros/hyfconsult.com/s/AKfycbx0b_L2H4DqlVHYN8JciAfJ7_AsV7doeWpM0lk0WWFieiS8JTImMkv2TKB3icMtbW-FEA/exec';
+    // Segundos que se muestra la indicación de "marcar Capacitaciones" la primera vez (0 = no mostrar)
+    const SEGUNDOS_AVISO_PRIMERA_VEZ = 5;
+
+    const tarjeta = document.getElementById('tarjeta');
+    const params = new URLSearchParams(window.location.search);
+
+    function mostrarError(mensaje) {
+      tarjeta.className = 'tarjeta error';
+      tarjeta.innerHTML = '<h1>No se pudo conectar</h1><p></p>' +
+        '<a class="boton" href="' + APP_URL + '">Volver al calendario</a>';
+      tarjeta.querySelector('p').textContent = mensaje;
+    }
+
+    if (!params.get('code') && !params.get('error')) {
+      // Se abrió esta página directamente: se envía a la app
+      window.location.replace(APP_URL);
+    } else if (params.get('error')) {
+      mostrarError(params.get('error_description') || 'Se canceló el inicio de sesión con Microsoft.');
+    } else {
+      const url = APP_URL + '?accion=conectar' +
+        '&code=' + encodeURIComponent(params.get('code')) +
+        '&state=' + encodeURIComponent(params.get('state') || '');
+
+      // Quita el código de la barra de direcciones (no se puede usar dos veces)
+      history.replaceState(null, '', window.location.pathname);
+
+      fetch(url)
+        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) return mostrarError(r.error || 'Ocurrió un error inesperado.');
+
+          if (r.tipo === 'lector') {
+            // Ya está suscrito: solo se abre su Outlook
+            if (r.yaSuscrito) return window.location.replace(r.urlOutlook);
+
+            // Primera vez: Outlook se abre con "Suscribirse desde la web" ya rellenado
+            const urlIcs = APP_URL + '?calendario=' + encodeURIComponent(r.tokenCalendario);
+            const urlSuscribir = r.urlOutlook + '0/addfromweb?url=' + encodeURIComponent(urlIcs) +
+              '&name=' + encodeURIComponent('Capacitaciones');
+            tarjeta.innerHTML = '<h1>¡Listo! Abriendo Outlook…</h1>' +
+              '<div class="aviso"><b>Solo esta vez:</b> en la ventana que aparece en Outlook, ' +
+              'haz clic en <b>"Importar"</b> para agregar el calendario <b>Capacitaciones</b> ' +
+              '(es de solo lectura).</div>';
+            setTimeout(() => window.location.replace(urlSuscribir), SEGUNDOS_AVISO_PRIMERA_VEZ * 1000);
+            return;
+          }
+
+          if (r.calendarioNuevo && SEGUNDOS_AVISO_PRIMERA_VEZ > 0) {
+            // Primera vez: Outlook no deja que una app active el calendario, se indica cómo hacerlo
+            tarjeta.innerHTML = '<h1>¡Listo! Abriendo Outlook…</h1>' +
+              '<div class="aviso"><b>Solo esta vez:</b> en Outlook, en la columna izquierda, ' +
+              'dentro de <b>"Mis calendarios"</b>, marca <b>☑ Capacitaciones</b> para ver los cursos.</div>';
+            setTimeout(() => window.location.replace(r.urlOutlook), SEGUNDOS_AVISO_PRIMERA_VEZ * 1000);
+          } else {
+            window.location.replace(r.urlOutlook);
+          }
+        })
+        .catch(() => mostrarError('No se pudo comunicar con el calendario. Revisa tu conexión e inténtalo de nuevo.'));
+    }
+  </script>
+</body>
+</html>
