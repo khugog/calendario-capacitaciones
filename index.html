@@ -72,8 +72,16 @@
       history.replaceState(null, '', window.location.pathname);
 
       fetch(url)
-        .then(r => r.json())
-        .then(r => {
+        .then(respuesta => respuesta.text())
+        .then(texto => {
+          let r;
+          try {
+            r = JSON.parse(texto);
+          } catch (e) {
+            // No respondió el calendario de Microsoft (p. ej. otro enlace o un error de Google)
+            const resumen = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200);
+            return mostrarError('El calendario respondió algo inesperado: ' + resumen);
+          }
           if (!r.ok) return mostrarError(r.error || 'Ocurrió un error inesperado.');
 
           if (r.calendarioNuevo && SEGUNDOS_AVISO_PRIMERA_VEZ > 0) {
@@ -86,7 +94,8 @@
             window.location.replace(r.urlOutlook);
           }
         })
-        .catch(() => mostrarError('No se pudo comunicar con el calendario. Revisa tu conexión e inténtalo de nuevo.'));
+        .catch(err => mostrarError('No se pudo comunicar con el calendario (' + err.message + '). ' +
+          'Revisa que la app esté implementada con acceso "Cualquier usuario" e inténtalo de nuevo.'));
     }
   </script>
 </body>
