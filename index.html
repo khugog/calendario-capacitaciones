@@ -44,7 +44,7 @@
 
   <script>
     // URL de la app web de Apps Script (la que termina en /exec)
-    const APP_URL = 'https://script.google.com/a/macros/hyfconsult.com/s/AKfycbx0b_L2H4DqlVHYN8JciAfJ7_AsV7doeWpM0lk0WWFieiS8JTImMkv2TKB3icMtbW-FEA/exec';
+    const APP_URL = 'https://script.google.com/macros/s/AKfycbyrNv3SDKasypKF9aC4zVdZQ7jqKsDaBrvE6195sRHHzbppNJYtZnd6Mpjc2kC7U_Gt/exec';
     // Segundos que se muestra la indicación de "marcar Capacitaciones" la primera vez (0 = no mostrar)
     const SEGUNDOS_AVISO_PRIMERA_VEZ = 5;
 
@@ -80,7 +80,7 @@
             // Primera vez: Outlook no deja que una app active el calendario, se indica cómo hacerlo
             tarjeta.innerHTML = '<h1>¡Listo! Abriendo Outlook…</h1>' +
               '<div class="aviso"><b>Solo esta vez:</b> en Outlook, en la columna izquierda, ' +
-              'dentro de <b>"Mis calendarios"</b>, marca <b>☑ Capacitaciones</b> para ver los cursos.</div>';
+              'dentro de <b>"Calendario de Capacitaciones"</b>, marca <b>☑ Capacitaciones</b> para ver los cursos.</div>';
             setTimeout(() => window.location.replace(r.urlOutlook), SEGUNDOS_AVISO_PRIMERA_VEZ * 1000);
           } else {
             window.location.replace(r.urlOutlook);
